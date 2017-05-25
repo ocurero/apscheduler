@@ -361,7 +361,7 @@ class BaseScheduler(six.with_metaclass(ABCMeta)):
     def add_job(self, func, trigger=None, args=None, kwargs=None, id=None, name=None,
                 misfire_grace_time=undefined, coalesce=undefined, max_instances=undefined,
                 next_run_time=undefined, jobstore='default', executor='default',
-                replace_existing=False, **trigger_args):
+                replace_existing=False, job_class=undefined, **trigger_args):
         """
         add_job(func, trigger=None, args=None, kwargs=None, id=None, \
             name=None, misfire_grace_time=undefined, coalesce=undefined, \
@@ -404,6 +404,7 @@ class BaseScheduler(six.with_metaclass(ABCMeta)):
         :param str|unicode executor: alias of the executor to run the job with
         :param bool replace_existing: ``True`` to replace an existing job with the same ``id``
             (but retain the number of runs from the existing one)
+        :param obj job_class: Job class of the job
         :rtype: Job
 
         """
@@ -422,7 +423,8 @@ class BaseScheduler(six.with_metaclass(ABCMeta)):
         }
         job_kwargs = dict((key, value) for key, value in six.iteritems(job_kwargs) if
                           value is not undefined)
-        job = Job(self, **job_kwargs)
+        job_class = self._job_defaults['job_class'] if job_class == undefined else job_class
+        job = job_class(self, **job_kwargs)
 
         # Don't really add jobs to job stores before the scheduler is up and running
         with self._jobstores_lock:
@@ -694,7 +696,8 @@ class BaseScheduler(six.with_metaclass(ABCMeta)):
         self._job_defaults = {
             'misfire_grace_time': asint(job_defaults.get('misfire_grace_time', 1)),
             'coalesce': asbool(job_defaults.get('coalesce', True)),
-            'max_instances': asint(job_defaults.get('max_instances', 1))
+            'max_instances': asint(job_defaults.get('max_instances', 1)),
+            'job_class': maybe_ref(job_defaults.get('job_class', 'Job'))
         }
 
         # Configure executors
